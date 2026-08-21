@@ -1,31 +1,58 @@
-print("Automação Sienge Iniciada!")
-
-#imports
 import pymupdf
-import re #import para expressões regulares
+import re
 
-caminho_pdf = "Nf_n_807_Agosto_2026.pdf"
 
-documento = pymupdf.open(caminho_pdf)  
+# Caminho do arquivo PDF
+caminho_pdf = "fatura.pdf"
 
+
+# Abre o PDF
+documento = pymupdf.open(caminho_pdf)
+
+
+# Seleciona a primeira página
+pagina = documento[0]
+
+
+# Extrai o texto da página
+texto = pagina.get_text()
+
+
+# Procura datas no formato DD/MM/AAAA
 datas = re.findall(r"\d{2}/\d{2}/\d{4}", texto)
 
-print(f"Quantidade de páginas: {len(documento)}") 
-"""
-f -> permite colocar valores de     variaveis dentro do texto
-len -> Retorna o tamanho de alguma coisa (Nesse caso: numero de paginas do PDF) 
-"""
 
-print("\n" + "=" * 60)
-
-#for que se repete para cada número de página
-for numero, pagina in enumerate(documento, start=1):
-
-    texto = pagina.get_text() # -> pagina.get_text() le o texto da página 
-
-    print(f"\n--- PÁGINA {numero} ---\n")
-    print(texto)
+# Procura valores monetários
+valores = re.findall(r"R\$\s*[\d.,]+", texto)
 
 
+# Procura CNPJs
+cnpjs = re.findall(r"\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}", texto)
 
+
+# Procura sequências de 6 ou mais números
+numeros = re.findall(r"\b\d{6,}\b", texto)
+
+
+# Mostra os resultados
+print("\n===== ANÁLISE DO DOCUMENTO =====")
+
+print("\nDatas encontradas:")
+for data in datas:
+    print("-", data)
+
+print("\nValores encontrados:")
+for valor in valores:
+    print("-", valor)
+
+print("\nCNPJs encontrados:")
+for cnpj in cnpjs:
+    print("-", cnpj)
+
+print("\nPossíveis números de documento:")
+for numero in numeros:
+    print("-", numero)
+
+
+# Fecha o documento
 documento.close()
