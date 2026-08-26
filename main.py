@@ -3,7 +3,7 @@ import re
 
 
 # Caminho do arquivo PDF
-caminho_pdf = "fatura.pdf"
+caminho_pdf = "titulo_4045989_demonstrativo.pdf"
 
 
 # Abre o PDF
@@ -17,41 +17,62 @@ pagina = documento[0]
 # Extrai o texto da página
 texto = pagina.get_text()
 
+linhas = texto.splitlines()
 
-# Procura datas no formato DD/MM/AAAA
-datas = re.findall(r"\d{2}/\d{2}/\d{4}", texto)
-
-
-# Procura valores monetários
-valores = re.findall(r"R\$\s*[\d.,]+", texto)
+for indice, linha in enumerate(linhas):
+    print(indice, "->", linha)
 
 
-# Procura CNPJs
-cnpjs = re.findall(r"\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}", texto)
+# -------------------------------
+# IDENTIFICAR DATA DE EMISSÃO
+# -------------------------------
+
+padrao_emissao = r"EMISSÃO:\s*(\d{2}/\d{2}/\d{4})"
+
+resultado_emissao = re.search(padrao_emissao, texto)
+
+if resultado_emissao:
+    data_emissao = resultado_emissao.group(1)
 
 
-# Procura sequências de 6 ou mais números
-numeros = re.findall(r"\b\d{6,}\b", texto)
+# -------------------------------
+# IDENTIFICAR VENCIMENTO
+# -------------------------------
+
+padrao_vencimento = r"VENCIMENTO:\s*(\d{2}/\d{2}/\d{4})"
+
+resultado_vencimento = re.search(padrao_vencimento, texto)
+
+if resultado_vencimento:
+    data_vencimento = resultado_vencimento.group(1)
 
 
-# Mostra os resultados
-print("\n===== ANÁLISE DO DOCUMENTO =====")
+# -------------------------------
+# IDENTIFICAR VALOR DA FATURA
+# -------------------------------
 
-print("\nDatas encontradas:")
-for data in datas:
-    print("-", data)
+padrao_valor = r"VALOR DA FATURA:\s*([\d.,]+)"
 
-print("\nValores encontrados:")
-for valor in valores:
-    print("-", valor)
+resultado_valor = re.search(padrao_valor, texto)
 
-print("\nCNPJs encontrados:")
-for cnpj in cnpjs:
-    print("-", cnpj)
+if resultado_valor:
+    valor_fatura = resultado_valor.group(1)
 
-print("\nPossíveis números de documento:")
-for numero in numeros:
-    print("-", numero)
+
+# -------------------------------
+# MOSTRAR RESULTADO
+# -------------------------------
+
+print("\n===== DADOS IDENTIFICADOS =====")
+
+if resultado_emissao:
+    print("Emissão:", data_emissao)
+
+if resultado_vencimento:
+    print("Vencimento:", data_vencimento)
+
+if resultado_valor:
+    print("Valor da fatura:", valor_fatura)
 
 
 # Fecha o documento
