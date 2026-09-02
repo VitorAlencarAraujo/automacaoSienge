@@ -1,8 +1,9 @@
 import win32com.client
 import os
+import json
 
 from controle_emails import email_ja_processado
-
+from analisador_email import analisar_email
 
 # Conecta ao Outlook
 outlook = win32com.client.Dispatch("Outlook.Application")
@@ -15,7 +16,6 @@ caixa_entrada = namespace.GetDefaultFolder(6)
 
 # Obtém os e-mails
 mensagens = caixa_entrada.Items
-
 
 # Pasta onde os anexos serão salvos
 pasta_projeto = os.path.dirname(os.path.abspath(__file__))
@@ -46,6 +46,12 @@ for mensagem in list(mensagens)[-1:]:
     if email_ja_processado(entry_id):
         continue
 
+    pasta_anexos_email = os.path.join(
+    pasta_anexos,
+    entry_id
+)
+    os.makedirs(pasta_anexos_email, exist_ok=True)
+
     print("===== NOVO E-MAIL ENCONTRADO =====")
 
     print("Assunto:", mensagem.Subject)
@@ -63,21 +69,98 @@ for mensagem in list(mensagens)[-1:]:
 
     print("Quantidade de objetos de anexo:", mensagem.Attachments.Count)
 
+    anexos_salvos = []
+
     for anexo in mensagem.Attachments:
 
-        print("   -", anexo.FileName)
+        nome_arquivo = anexo.FileName
 
-        # Caminho onde o anexo será salvo
         caminho_anexo = os.path.join(
-            pasta_anexos,
-            anexo.FileName
+            pasta_anexos_email,
+            nome_arquivo
         )
+       
 
-        # Salva o anexo
         anexo.SaveAsFile(caminho_anexo)
+
+        anexos_salvos.append(caminho_anexo)
 
         print("     Salvo em:", caminho_anexo)
 
+        print()
+        print("=" * 50)
+        print()
+
+    print("===== ENVIANDO E-MAIL PARA A IA =====")
+
+    resultado = analisar_email(
+        mensagem.Body,
+        anexos_salvos
+    )
+
+    pasta_analises = os.path.join(
+    pasta_projeto,
+    "analises"
+    )
+
+    os.makedirs(pasta_analises, exist_ok=True)
+
+    caminho_json = os.path.join(
+        pasta_analises,
+        f"{entry_id}.json"
+    )
+
+    with open(caminho_json, "w", encoding="utf-8") as arquivo:
+        json.dump(
+            resultado.model_dump(),
+            arquivo,
+            ensure_ascii=False,
+            indent=4
+    )
+
     print()
-    print("=" * 50)
+    print("===== REMOVENDO ARQUIVOS IRRELEVANTES =====")
+
+    for documento in resultado.documentos_ignorados:
+
+        for caminho_arquivo in anexos_salvos:
+
+            nome_arquivo = os.path.basename(caminho_arquivo)
+
+            if nome_arquivo == documento.nome_arquivo:
+
+                if os.path.exists(caminho_arquivo):
+
+                    os.remove(caminho_arquivo)
+
+                    print("Removido:", nome_arquivo)
+
+                break
+
     print()
+    print("===== ANÁLISE DA IA =====")
+
+    print("É lançamento:", resultado.eh_lancamento)
+    print("Motivo:", resultado.motivo)
+
+    print()
+    print("Instruções:")
+
+    for instrucao in resultado.instrucoes_lancamento:
+        print("-", instrucao)
+
+    print()
+    print("Documentos relevantes:")
+
+    for documento in resultado.documentos_relevantes:
+        print("-", documento.nome_arquivo)
+        print("  Tipo:", documento.tipo_documento)
+        print("  Motivo:", documento.motivo)
+
+    print()
+    print("Documentos ignorados:")
+
+    for documento in resultado.documentos_ignorados:
+        print("-", documento.nome_arquivo)
+        print("  Tipo:", documento.tipo_documento)
+        print("  Motivo:", documento.motivo)
