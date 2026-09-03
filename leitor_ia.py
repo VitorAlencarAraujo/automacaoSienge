@@ -12,6 +12,7 @@ class DadosFatura(BaseModel):
     data_vencimento: str | None
     valor_bruto: float | None
 
+
 def validar_cnpj(cnpj):
 
     if not cnpj:
@@ -23,6 +24,7 @@ def validar_cnpj(cnpj):
         return False
 
     return True
+
 
 def validar_fatura(dados):
 
@@ -60,15 +62,16 @@ def validar_fatura(dados):
 
     return erros
 
-cliente = genai.Client()
 
+def analisar_documento(caminho_arquivo):
 
-arquivo = cliente.files.upload(
-    file="titulo_4045989_demonstrativo.pdf"
-)
+    cliente = genai.Client()
 
+    arquivo = cliente.files.upload(
+        file=caminho_arquivo
+    )
 
-instrucao = """
+    instrucao = """
 Analise cuidadosamente este documento.
 
 Identifique as seguintes informações:
@@ -92,48 +95,20 @@ Considere a estrutura visual do documento para identificar
 corretamente cada informação.
 """
 
+    resposta = cliente.models.generate_content(
+        model="gemini-3.5-flash-lite",
+        contents=[
+            arquivo,
+            instrucao
+        ],
+        config={
+            "response_mime_type": "application/json",
+            "response_schema": DadosFatura,
+        }
+    )
 
-resposta = cliente.models.generate_content(
-    model="gemini-3.6-flash",
-    contents=[
-        arquivo,
-        instrucao
-    ],
-    config={
-        "response_mime_type": "application/json",
-        "response_schema": DadosFatura,
-    }
-)
+    dados = resposta.parsed
 
+    erros = validar_fatura(dados)
 
-dados = resposta.parsed
-
-print("===== DADOS DA FATURA =====")
-
-print("Fornecedor:", dados.fornecedor)
-print("CNPJ fornecedor:", dados.cnpj_fornecedor)
-print("Empresa pagadora:", dados.empresa_pagadora)
-print("CNPJ empresa pagadora:", dados.cnpj_empresa_pagadora)
-print("Número do documento:", dados.numero_documento)
-print("Data de emissão:", dados.data_emissao)
-print("Data de vencimento:", dados.data_vencimento)
-print("Valor bruto:", dados.valor_bruto)
-
-erros = validar_fatura(dados)
-
-
-if len(erros) == 0:
-
-    print()
-    print("===== VALIDAÇÃO =====")
-    print("✅ Documento aprovado nas validações básicas.")
-
-else:
-
-    print()
-    print("===== VALIDAÇÃO =====")
-    print("⚠️ Documento precisa de conferência.")
-    print()
-
-    for erro in erros:
-        print("❌", erro)
+    return dados, erros

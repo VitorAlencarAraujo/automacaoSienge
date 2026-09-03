@@ -4,6 +4,7 @@ import json
 
 from controle_emails import email_ja_processado
 from analisador_email import analisar_email
+from leitor_ia import analisar_documento
 
 # Conecta ao Outlook
 outlook = win32com.client.Dispatch("Outlook.Application")
@@ -31,13 +32,14 @@ print("===== LEITOR DE E-MAIL =====")
 print()
 
 
-for mensagem in list(mensagens)[-1:]:
+for mensagem in mensagens:
 
     # Obtém o endereço do remetente
     remetente = mensagem.SenderEmailAddress
 
     # Verifica se o e-mail é da Babi
-    
+    if mensagem.Subject != "ENC: FATURA CLARO PARA PAGTO EM 05/09/26":
+        continue
 
     # Obtém o identificador único do e-mail
     entry_id = mensagem.EntryID
@@ -156,6 +158,44 @@ for mensagem in list(mensagens)[-1:]:
         print("-", documento.nome_arquivo)
         print("  Tipo:", documento.tipo_documento)
         print("  Motivo:", documento.motivo)
+
+    print()
+
+    print("===== ANALISANDO DOCUMENTOS RELEVANTES =====")
+
+    for documento in resultado.documentos_relevantes:
+
+        for caminho_arquivo in anexos_salvos:
+
+            nome_arquivo = os.path.basename(caminho_arquivo)
+
+            if nome_arquivo == documento.nome_arquivo:
+
+                print()
+                print("Analisando:", nome_arquivo)
+
+                dados, erros = analisar_documento(caminho_arquivo)
+
+                print("Fornecedor:", dados.fornecedor)
+                print("CNPJ fornecedor:", dados.cnpj_fornecedor)
+                print("Empresa pagadora:", dados.empresa_pagadora)
+                print("CNPJ empresa pagadora:", dados.cnpj_empresa_pagadora)
+                print("Número do documento:", dados.numero_documento)
+                print("Data de emissão:", dados.data_emissao)
+                print("Data de vencimento:", dados.data_vencimento)
+                print("Valor bruto:", dados.valor_bruto)
+
+                print()
+
+                if len(erros) == 0:
+                    print("✅ Documento aprovado nas validações.")
+                else:
+                    print("⚠️ Documento precisa de conferência.")
+
+                    for erro in erros:
+                        print("❌", erro)
+
+                break        
 
     print()
     print("Documentos ignorados:")
