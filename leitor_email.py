@@ -100,26 +100,6 @@ for mensagem in mensagens:
         anexos_salvos
     )
 
-    pasta_analises = os.path.join(
-    pasta_projeto,
-    "analises"
-    )
-
-    os.makedirs(pasta_analises, exist_ok=True)
-
-    caminho_json = os.path.join(
-        pasta_analises,
-        f"{entry_id}.json"
-    )
-
-    with open(caminho_json, "w", encoding="utf-8") as arquivo:
-        json.dump(
-            resultado.model_dump(),
-            arquivo,
-            ensure_ascii=False,
-            indent=4
-    )
-
     print()
     print("===== REMOVENDO ARQUIVOS IRRELEVANTES =====")
 
@@ -163,6 +143,8 @@ for mensagem in mensagens:
 
     print("===== ANALISANDO DOCUMENTOS RELEVANTES =====")
 
+    documentos = []
+
     for documento in resultado.documentos_relevantes:
 
         for caminho_arquivo in anexos_salvos:
@@ -194,8 +176,66 @@ for mensagem in mensagens:
 
                     for erro in erros:
                         print("❌", erro)
+                    
 
-                break        
+                documentos.append({
+                    "nome_arquivo": documento.nome_arquivo,
+                    "caminho_arquivo": os.path.relpath(caminho_arquivo, pasta_projeto),
+                    "relevante": True,
+                    "tipo_documento": documento.tipo_documento,
+                    "motivo": documento.motivo,
+                    "dados": dados.model_dump(),
+                    "erros": erros
+                })
+
+                break    
+
+    for documento in resultado.documentos_ignorados:
+
+        documentos.append({
+        "nome_arquivo": documento.nome_arquivo,
+        "relevante": False,
+        "tipo_documento": documento.tipo_documento,
+        "motivo": documento.motivo
+    })
+
+    pasta_analises = os.path.join(
+    pasta_projeto,
+    "analises"
+    )
+
+    os.makedirs(pasta_analises, exist_ok=True)
+
+    caminho_json = os.path.join(
+        pasta_analises,
+        f"{entry_id}.json"
+    )
+
+    analise_completa = {
+    "email": {
+        "assunto": mensagem.Subject,
+        "remetente": remetente,
+        "data": str(mensagem.ReceivedTime),
+        "entry_id": entry_id
+    },
+
+    "analise": {
+        "eh_lancamento": resultado.eh_lancamento,
+        "motivo": resultado.motivo,
+        "instrucoes_lancamento": resultado.instrucoes_lancamento
+    },
+
+    "documentos": documentos
+    }
+
+    with open(caminho_json, "w", encoding="utf-8") as arquivo:
+
+        json.dump(
+            analise_completa,
+            arquivo,
+            ensure_ascii=False,
+            indent=4
+    )               
 
     print()
     print("Documentos ignorados:")
