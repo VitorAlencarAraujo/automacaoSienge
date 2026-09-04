@@ -1,7 +1,13 @@
 import sys
+import os
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
+sys.path.append(
+    os.path.dirname(
+        os.path.dirname(
+            os.path.abspath(__file__)
+        )
+    )
+)
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -11,8 +17,14 @@ from PySide6.QtWidgets import (
     QLabel,
     QListWidget,
     QPushButton,
+    QTextBrowser
 )
 
+from PySide6.QtWidgets import QListWidgetItem
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
+
+from leitor_outlook import obter_emails
 
 app = QApplication(sys.argv)
 
@@ -43,16 +55,40 @@ layout_principal.addLayout(layout_conteudo)
 # Lista de e-mails
 lista_emails = QListWidget()
 
-lista_emails.addItem("ENC: FATURA CLARO PARA PAGTO EM 05/09/26")
-lista_emails.addItem("DIGITALIZAÇÃO")
-lista_emails.addItem("Tarefa")
+emails = obter_emails()
+
+for email in emails:
+
+    texto = (
+        f"{email.Subject}\n"
+        f"{email.SenderEmailAddress}\n"
+        f"{email.ReceivedTime.strftime('%d/%m/%Y %H:%M')}"
+    )
+
+    item = QListWidgetItem(texto)
+
+    item.setData(
+        Qt.ItemDataRole.UserRole,
+        email
+    )
+
+    lista_emails.addItem(item)
 
 # Função para interagir com os emails da lista
 def selecionar_email(item):
 
-    informacao.setText(
-        f"E-mail selecionado:\n\n{item.text()}"
+    email = item.data(
+        Qt.ItemDataRole.UserRole
     )
+
+    texto = (
+        f"Assunto: {email.Subject}\n\n"
+        f"Remetente: {email.SenderEmailAddress}\n\n"
+        f"Data: {email.ReceivedTime.strftime('%d/%m/%Y %H:%M')}\n\n"
+        f"{email.Body}"
+    )
+
+    informacao.setText(texto)
 
     botao_analise.show()
 
@@ -68,8 +104,8 @@ layout_email = QVBoxLayout()
 layout_conteudo.addLayout(layout_email, 3)
 
 
-informacao = QLabel("Selecione um e-mail")
-informacao.setAlignment(Qt.AlignmentFlag.AlignCenter)
+informacao = QTextBrowser()
+informacao.setReadOnly(True)
 
 fonte = QFont()
 fonte.setPointSize(14)
